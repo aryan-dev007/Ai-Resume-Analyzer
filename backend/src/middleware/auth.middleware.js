@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const blacklistModel = require("../models/blacklist.model");
-const JWT_SECRET = process.env.JWT_SECRET || "default_jwt_secret_key_12345";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = async (req, res, next) => {
     try {

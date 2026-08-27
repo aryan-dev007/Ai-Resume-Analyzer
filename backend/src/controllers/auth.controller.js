@@ -9,7 +9,7 @@ const generateToken = (res, userId) => {
     const token = jwt.sign({ id: userId }, JWT_SECRET, {
         expiresIn: "1d",
     });
-
+    
     // Set HTTP-Only Cookie
     res.cookie("token", token, {
         httpOnly: true,
