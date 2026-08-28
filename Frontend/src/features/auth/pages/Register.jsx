@@ -1,15 +1,38 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import useAuth from "../hooks/useAuth";
 import "../auth.form.scss";
 
 function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const navigate = useNavigate();
+  const { register } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Registration details submitted:", { username, email, password });
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const data = await register(username, email, password);
+      setSuccess(data.message || "Registration successful! Redirecting to login...");
+      setUsername("");
+      setEmail("");
+      setPassword("");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -17,6 +40,9 @@ function Register() {
       <div className="auth-container">
         <h1 className="auth-title">Register</h1>
         
+        {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message">{success}</div>}
+
         <form className="auth-form" onSubmit={handleSubmit}>
           {/* Username Group */}
           <div className="form-group">
@@ -28,6 +54,7 @@ function Register() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={loading}
               autoComplete="username"
             />
           </div>
@@ -42,6 +69,7 @@ function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
               autoComplete="email"
             />
           </div>
@@ -56,11 +84,12 @@ function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="auth-btn">
-            Register
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
 
@@ -74,3 +103,5 @@ function Register() {
 }
 
 export default Register;
+
+
