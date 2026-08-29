@@ -18,7 +18,6 @@ function Register() {
     setLoading(true);
     setError("");
     setSuccess("");
-
     try {
       const data = await register(username, email, password);
       setSuccess(data.message || "Registration successful! Redirecting to login...");
