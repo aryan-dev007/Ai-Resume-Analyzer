@@ -3,7 +3,6 @@ const aiController = require("../controllers/ai.controller");
 const protect = require("../middleware/auth.middleware");
 
 const aiRouter = Router();
-
 // All AI routes require authentication
 aiRouter.post("/interview-report", protect, aiController.createReport);
 aiRouter.get("/interview-reports", protect, aiController.getUserReports);

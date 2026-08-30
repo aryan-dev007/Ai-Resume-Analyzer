@@ -1,99 +1,61 @@
 const { GoogleGenAI } = require("@google/genai");
-const { z } = require("zod");
-const { zodToJsonSchema } = require("zod-to-json-schema");
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY,
 });
 
-// ── Zod sub-schemas (mirrors interviewReport.model.js) ───────
+// ── Hand-crafted JSON Schema for Gemini structured output ────
+// (Gemini doesn't support $ref, additionalProperties, or nested required)
 
-const questionSchema = z.object({
-    question: z.string().describe("The interview question"),
-    intention: z.string().describe("Why this question is being asked — what it evaluates"),
-    answer: z.string().describe("How to answer this question, what points to cover, what should be the approach"),
-    difficulty: z.enum(["easy", "medium", "hard"]).describe("Difficulty level"),
-    topic: z.string().describe("The topic area, e.g. React, Node.js, System Design, Teamwork"),
-});
+const questionItem = {
+    type: "object",
+    properties: {
+        question:   { type: "string", description: "The interview question" },
+        intention:  { type: "string", description: "Why this question is being asked" },
+        answer:     { type: "string", description: "How to answer — key points and approach" },
+        difficulty: { type: "string", enum: ["easy", "medium", "hard"], description: "Difficulty level" },
+        topic:      { type: "string", description: "Topic area, e.g. React, Node.js, System Design" },
+    },
+};
 
-const skillGapSchema = z.object({
-    skill: z.string().describe("The missing or weak skill"),
-    severity: z.enum(["low", "medium", "high", "critical"]).describe("How critical this gap is"),
-    recommendation: z.string().describe("Actionable suggestion to bridge this skill gap"),
-});
+const skillGapItem = {
+    type: "object",
+    properties: {
+        skill:          { type: "string", description: "The missing or weak skill" },
+        severity:       { type: "string", enum: ["low", "medium", "high", "critical"], description: "How critical this gap is" },
+        recommendation: { type: "string", description: "Actionable suggestion to bridge this gap" },
+    },
+};
 
-const preparationStepSchema = z.object({
-    day: z.string().describe("The day or day range, e.g. 'Day 1', 'Day 2-3', 'Week 2'"),
-    topic: z.string().describe("What to study or practice on this day"),
-    tasks: z.array(z.string()).describe("Specific actionable tasks for this day"),
-    resources: z.array(z.string()).describe("Recommended resources — links, books, platforms"),
-    estimatedHours: z.number().describe("Estimated study hours for this day"),
-});
+const preparationStepItem = {
+    type: "object",
+    properties: {
+        day:            { type: "string", description: "Day or range, e.g. 'Day 1', 'Day 2-3'" },
+        topic:          { type: "string", description: "What to study or practice" },
+        tasks:          { type: "array", items: { type: "string" }, description: "Specific actionable tasks" },
+        resources:      { type: "array", items: { type: "string" }, description: "Recommended resources" },
+        estimatedHours: { type: "number", description: "Estimated study hours" },
+    },
+};
 
-// ── Main response schema ─────────────────────────────────────
-
-const interviewReportSchema = z.object({
-    matchScore: z
-        .number()
-        .describe("Overall resume-to-job-description match score from 0 to 100"),
-
-    summary: z
-        .string()
-        .describe("A concise overall assessment of the candidate's fit for the role"),
-
-    technicalQuestions: z
-        .array(questionSchema)
-        .describe("5-8 technical interview questions based on the job description and resume"),
-
-    behavioralQuestions: z
-        .array(questionSchema)
-        .describe("3-5 behavioral/situational interview questions"),
-
-    skillGaps: z
-        .array(skillGapSchema)
-        .describe("Skills required by the JD but missing or weak in the resume"),
-
-    strengths: z
-        .array(z.string())
-        .describe("Key strengths the candidate brings based on their resume"),
-
-    keywordsMatched: z
-        .array(z.string())
-        .describe("Important JD keywords/technologies found in the resume"),
-
-    keywordsMissing: z
-        .array(z.string())
-        .describe("Important JD keywords/technologies NOT found in the resume"),
-
-    recommendations: z
-        .array(z.string())
-        .describe("Actionable tips to improve the resume or interview preparation"),
-
-    preparationPlan: z
-        .array(preparationStepSchema)
-        .describe("A structured day-by-day interview preparation plan (7-14 days) covering skill gaps, technical topics, and behavioral prep"),
-
-    experienceLevel: z
-        .enum(["intern", "junior", "mid", "senior", "lead", "principal"])
-        .describe("Estimated experience level based on the resume"),
-
-    jobTitle: z
-        .string()
-        .describe("The job title extracted from the job description"),
-
-    company: z
-        .string()
-        .describe("The company name extracted from the job description, or 'Unknown' if not found"),
-});
-
-// Convert Zod schema → JSON Schema for Gemini's responseSchema
-const rawSchema = zodToJsonSchema(interviewReportSchema, {
-    $refStrategy: "none",
-});
-
-// zodToJsonSchema adds wrapper keys ($schema, additionalProperties) that
-// Gemini doesn't support — strip them to get a clean schema
-const { $schema, additionalProperties, ...jsonSchema } = rawSchema;
+const jsonSchema = {
+    type: "object",
+    properties: {
+        matchScore:         { type: "number", description: "Overall resume-to-JD match score 0-100" },
+        summary:            { type: "string", description: "3-5 sentence assessment of the candidate's fit" },
+        technicalQuestions: { type: "array", items: questionItem, description: "5-8 technical interview questions" },
+        behavioralQuestions:{ type: "array", items: questionItem, description: "3-5 behavioral interview questions" },
+        skillGaps:          { type: "array", items: skillGapItem, description: "Skills the JD requires but resume lacks" },
+        strengths:          { type: "array", items: { type: "string" }, description: "Key strengths from the resume" },
+        keywordsMatched:    { type: "array", items: { type: "string" }, description: "JD keywords found in resume" },
+        keywordsMissing:    { type: "array", items: { type: "string" }, description: "JD keywords NOT in resume" },
+        recommendations:    { type: "array", items: { type: "string" }, description: "Actionable tips for improvement" },
+        preparationPlan:    { type: "array", items: preparationStepItem, description: "7-14 day preparation plan" },
+        experienceLevel:    { type: "string", enum: ["intern", "junior", "mid", "senior", "lead", "principal"], description: "Estimated experience level" },
+        jobTitle:           { type: "string", description: "Job title from the JD" },
+        company:            { type: "string", description: "Company name from the JD, or 'Unknown'" },
+    },
+};
 
 // ── System prompt ────────────────────────────────────────────
 
@@ -143,9 +105,21 @@ Analyze the above and produce a complete interview preparation report.`;
         config: {
             systemInstruction: SYSTEM_PROMPT,
             responseMimeType: "application/json",
-            responseSchema: jsonSchema,
+            maxOutputTokens: 65536,
+            temperature: 0.4,
         },
     });
+
+    // Debug: log response metadata
+    console.log("📡 Gemini response status:", response.candidates?.[0]?.finishReason || "unknown");
+
+    // Check if the response was blocked or empty
+    if (!response.text) {
+        console.error("⚠️  Gemini returned empty/blocked response:");
+        console.error("  candidates:", JSON.stringify(response.candidates, null, 2));
+        console.error("  promptFeedback:", JSON.stringify(response.promptFeedback, null, 2));
+        throw new Error("Gemini returned no text — response may have been blocked or timed out");
+    }
 
     // Parse the structured JSON response
     const report = JSON.parse(response.text);
