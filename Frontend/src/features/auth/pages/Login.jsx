@@ -24,7 +24,7 @@ function Login() {
       setEmail("");
       setPassword("");
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/home");
       }, 1000);
     } catch (err) {
       setError(err.message || "Invalid credentials. Please try again.");
