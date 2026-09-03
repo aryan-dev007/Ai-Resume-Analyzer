@@ -12,7 +12,7 @@ const ACCEPTED_TYPES = [
 ];
 
 function Home() {
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // ── Form state ──
@@ -25,12 +25,6 @@ function Home() {
   const [success, setSuccess] = useState("");
 
   const fileInputRef = useRef(null);
-
-  // ── Auth guard ──
-  if (!authLoading && !isAuthenticated) {
-    navigate("/login");
-    return null;
-  }
 
   // ── File helpers ──
   const validateFile = (file) => {
@@ -55,6 +49,15 @@ function Home() {
     }
   }, []);
 
+  // ── Auth guard ──
+  if (!authLoading && !isAuthenticated) {
+    navigate("/login");
+    return null;
+  }
+
+  // handleFileDrop and validateFile have been moved up
+
+  // handleFileDrop has been moved up
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (file && validateFile(file)) {
@@ -97,41 +100,38 @@ function Home() {
 
     setSubmitting(true);
     try {
-      let resumeText = "";
+      const formData = new FormData();
+      formData.append("jobDescription", jobDescription.trim());
+      formData.append("selfDescription", selfDescription.trim());
       if (resumeFile) {
-        resumeText = await resumeFile.text();
+        formData.append("resume", resumeFile);
       }
 
-      const res = await fetch("/api/ai/interview-report", {
+      const res = await fetch("/api/interview/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          resumeText: resumeText || selfDescription.trim(),
-          jobDescription: jobDescription.trim(),
-          selfDescription: selfDescription.trim(),
-        }),
+        body: formData,
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Analysis failed.");
+      if (!res.ok) throw new Error(data.error || data.message || "Analysis failed.");
 
-      setSuccess("Analysis complete! Your interview strategy is ready.");
+      setSuccess("Analysis complete! Redirecting to your interview strategy...");
       setResumeFile(null);
       setJobDescription("");
       setSelfDescription("");
       if (fileInputRef.current) fileInputRef.current.value = "";
+
+      if (data.report && data.report._id) {
+        setTimeout(() => {
+          navigate(`/interview/${data.report._id}`);
+        }, 1000);
+      }
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // ── Logout ──
-  const handleLogout = async () => {
-    try { await logout(); } catch { /* silent */ }
-    navigate("/login");
   };
 
   // ── Auth loading ──

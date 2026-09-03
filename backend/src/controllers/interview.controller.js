@@ -6,34 +6,36 @@ const InterviewReport = require("../models/interviewReport.model");
 async function generateReportController(req, res) {
     try {
         const resumeFile = req.file;
-
-        // Validate file was uploaded
-        if (!resumeFile) {
-            return res.status(400).json({
-                success: false,
-                message: "Resume PDF file is required.",
-            });
-        }
-
         const { selfDescription, jobDescription } = req.body;
 
-        // Validate required text fields
-        if (!selfDescription || !jobDescription) {
+        // Validate inputs
+        if (!jobDescription) {
             return res.status(400).json({
                 success: false,
-                message: "selfDescription and jobDescription are required.",
+                message: "jobDescription is required.",
+            });
+        }
+        if (!resumeFile && !selfDescription) {
+            return res.status(400).json({
+                success: false,
+                message: "Either a Resume PDF or a self-description is required.",
             });
         }
 
-        // Extract text from uploaded PDF
-        const pdfData = await pdfParse(resumeFile.buffer);
-        const resumeText = pdfData.text;
+        let resumeText = "";
+        if (resumeFile) {
+            // Extract text from uploaded PDF
+            const pdfData = await pdfParse(resumeFile.buffer);
+            resumeText = pdfData.text;
 
-        if (!resumeText || resumeText.trim().length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Could not extract text from the PDF. Please ensure it is not a scanned image.",
-            });
+            if (!resumeText || resumeText.trim().length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Could not extract text from the PDF. Please ensure it is not a scanned image.",
+                });
+            }
+        } else {
+            resumeText = selfDescription;
         }
 
         // Call Gemini AI to generate the interview report
@@ -43,13 +45,47 @@ async function generateReportController(req, res) {
             jobDescription,
         });
 
+        // Fix potential Gemini schema deviation (range vs day, capitalization, missing required strings)
+        const rawTech = aiResult.technicalQuestions || aiResult.technical_questions || [];
+        const rawBehav = aiResult.behavioralQuestions || aiResult.behavioral_questions || [];
+        const rawGaps = aiResult.skillGaps || aiResult.skill_gaps || [];
+
+        const normalizedAiResult = {
+            ...aiResult,
+            technicalQuestions: rawTech.map(q => ({
+                question: q.question || "Technical Question",
+                intention: q.intention || q.intent || "Evaluates core technical skills.",
+                answer: q.answer || q.sampleAnswer || q.solution || "Formulate an answer covering core concepts, syntax, and performance implications.",
+                difficulty: (q.difficulty || "medium").toLowerCase(),
+                topic: q.topic || "Engineering",
+            })),
+            behavioralQuestions: rawBehav.map(q => ({
+                question: q.question || "Behavioral Question",
+                intention: q.intention || q.intent || "Evaluates teamwork and problem-solving.",
+                answer: q.answer || q.sampleAnswer || q.solution || "Use the STAR method (Situation, Task, Action, Result) to frame your response.",
+                difficulty: (q.difficulty || "medium").toLowerCase(),
+                topic: q.topic || "Behavioral",
+            })),
+            skillGaps: rawGaps.map(sg => ({
+                skill: typeof sg === "string" ? sg : (sg.skill || "Missing Skill"),
+                severity: (sg.severity || "medium").toLowerCase(),
+                recommendation: sg.recommendation || "Review official documentation and complete practice exercises.",
+            })),
+            keywordsMatched: aiResult.keywordsMatched || aiResult.keywords_matched || [],
+            keywordsMissing: aiResult.keywordsMissing || aiResult.keywords_missing || [],
+            preparationPlan: (aiResult.preparationPlan || aiResult.preparation_plan || []).map(step => ({
+                ...step,
+                day: step.day || step.range || "Unknown Day"
+            }))
+        };
+
         // Save to database with user reference and original inputs
         const report = await InterviewReport.create({
             user: req.user.id,
             jobDescription,
             resumeText,
-            selfDescription,
-            ...aiResult,
+            selfDescription: selfDescription || "",
+            ...normalizedAiResult,
             status: "completed",
         });
 
@@ -60,10 +96,11 @@ async function generateReportController(req, res) {
         });
     } catch (error) {
         console.error("Interview Report Error:", error);
+        require("fs").writeFileSync("error_debug.txt", error.stack || String(error));
         res.status(500).json({
             success: false,
-            message: "Failed to generate interview report",
-            error: error.message,
+            message: error.message || "Failed to generate interview report",
+            error: error.stack || error.message,
         });
     }
 }

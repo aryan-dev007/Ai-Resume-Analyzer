@@ -35,6 +35,7 @@ const questionSchema = new mongoose.Schema(
         difficulty: {
             type: String,
             enum: ["easy", "medium", "hard"],
+            lowercase: true,
             default: "medium",
         },
         topic: {
@@ -53,6 +54,8 @@ const skillGapSchema = new mongoose.Schema(
         severity: {
             type: String,
             enum: ["low", "medium", "high", "critical"],
+            lowercase: true,
+            default: "medium",
             required: true,
         },
         recommendation: {
@@ -113,7 +116,7 @@ const interviewReportSchema = new mongoose.Schema(
         },
         selfDescription: {
             type: String,
-            required: [true, "Self description is required"],
+            default: "",
             trim: true,
         },
 

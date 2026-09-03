@@ -1,0 +1,213 @@
+// ── Design System Variables (Shared with home.scss) ──
+$bg-body: #0a0a0f;
+$bg-card: #111118;
+$bg-input: #161621;
+$bg-input-hover: #1c1c2a;
+$border-card: rgba(255, 255, 255, 0.06);
+$border-input: rgba(255, 255, 255, 0.08);
+$border-dashed: rgba(255, 255, 255, 0.12);
+$accent: #e91e73;
+$accent-dark: #c2185b;
+$accent-glow: rgba(233, 30, 115, 0.15);
+$gradient-accent: linear-gradient(135deg, #e91e73, #ff6ec7);
+$text-white: #ffffff;
+$text-secondary: #9e9eb3;
+$text-muted: #5e5e73;
+$radius-xl: 20px;
+$radius-lg: 16px;
+$radius-md: 12px;
+$radius-sm: 8px;
+
+.interview-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: $bg-body;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: $text-white;
+  box-sizing: border-box;
+}
+
+.interview-card {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  width: 100%;
+  max-width: 1320px;
+  height: 85vh;
+  background-color: $bg-card;
+  border-radius: $radius-xl;
+  border: 1px solid $border-card;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+
+  /* Column styling */
+  > div {
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+
+  /* Left Sidebar Navigation */
+  .interview-sidebar {
+    border-right: 1px solid $border-card;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 2.5rem;
+    background: rgba(255, 255, 255, 0.01);
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: $text-muted;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1.5rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      .nav-item {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: $text-secondary;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+        border-radius: $radius-md;
+
+        &:hover {
+          color: $text-white;
+          background: rgba(255, 255, 255, 0.04);
+        }
+
+        &.active {
+          color: $text-white;
+          background: $accent-glow;
+          border: 1px solid rgba(233, 30, 115, 0.3);
+          font-weight: 700;
+
+          .cursor-icon {
+            display: inline-block;
+          }
+        }
+
+        .cursor-icon {
+          display: none;
+          font-size: 0.9rem;
+          color: $accent;
+        }
+      }
+    }
+  }
+
+  /* Middle Main Content */
+  .interview-main-content {
+    display: block;
+    overflow-y: auto;
+    padding: 2.5rem;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $border-input;
+      border-radius: 4px;
+    }
+  }
+
+  /* Right Panel */
+  .interview-right-panel {
+    border-left: 1px solid $border-card;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem 1.8rem;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.01);
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $border-input;
+      border-radius: 4px;
+    }
+
+    .panel-heading {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 1.2rem;
+      color: $text-white;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .skill-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+
+      .skill-pill {
+        padding: 0.4rem 1rem;
+        background-color: $bg-input;
+        border: 1px solid $border-input;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: $text-secondary;
+        cursor: default;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+
+        &:hover {
+          background-color: $bg-input-hover;
+          border-color: rgba(233, 30, 115, 0.3);
+          color: $text-white;
+        }
+      }
+    }
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .interview-card {
+    grid-template-columns: 220px 1fr 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .interview-page-container {
+    padding: 1rem;
+  }
+
+  .interview-card {
+    grid-template-columns: 1fr;
+    height: auto;
+    
+    .interview-sidebar, .interview-main-content, .interview-right-panel {
+      border: none;
+      border-bottom: 1px solid $border-card;
+      padding: 1.5rem;
+    }
+    
+    .interview-right-panel {
+      border-bottom: none;
+    }
+  }
+}
+

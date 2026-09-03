@@ -16,6 +16,7 @@ const questionItem = {
         difficulty: { type: "string", enum: ["easy", "medium", "hard"], description: "Difficulty level" },
         topic:      { type: "string", description: "Topic area, e.g. React, Node.js, System Design" },
     },
+    required: ["question", "intention", "answer", "difficulty", "topic"],
 };
 
 const skillGapItem = {
@@ -25,6 +26,7 @@ const skillGapItem = {
         severity:       { type: "string", enum: ["low", "medium", "high", "critical"], description: "How critical this gap is" },
         recommendation: { type: "string", description: "Actionable suggestion to bridge this gap" },
     },
+    required: ["skill", "severity", "recommendation"],
 };
 
 const preparationStepItem = {
@@ -36,6 +38,7 @@ const preparationStepItem = {
         resources:      { type: "array", items: { type: "string" }, description: "Recommended resources" },
         estimatedHours: { type: "number", description: "Estimated study hours" },
     },
+    required: ["day", "topic", "tasks", "resources", "estimatedHours"],
 };
 
 const jsonSchema = {
@@ -55,6 +58,21 @@ const jsonSchema = {
         jobTitle:           { type: "string", description: "Job title from the JD" },
         company:            { type: "string", description: "Company name from the JD, or 'Unknown'" },
     },
+    required: [
+        "matchScore",
+        "summary",
+        "technicalQuestions",
+        "behavioralQuestions",
+        "skillGaps",
+        "strengths",
+        "keywordsMatched",
+        "keywordsMissing",
+        "recommendations",
+        "preparationPlan",
+        "experienceLevel",
+        "jobTitle",
+        "company"
+    ],
 };
 
 // ── System prompt ────────────────────────────────────────────
@@ -79,7 +97,7 @@ Guidelines for each field:
 - keywordsMatched: List important JD keywords/technologies that ARE found in the resume.
 - keywordsMissing: List important JD keywords/technologies that are NOT found in the resume.
 - recommendations: Provide actionable, specific tips to improve the resume and interview readiness.
-- preparationPlan: Create a structured 7–14 day preparation plan. Each step should include: the day/range (e.g. "Day 1", "Day 2-3"), the topic to focus on, specific tasks to complete, recommended resources (courses, docs, practice sites), and estimated study hours.
+- preparationPlan: Create a structured 7–14 day preparation plan. Each step MUST include the exact key "day" (which can be a single day or range like "Day 1", "Day 2-3"), the "topic" to focus on, specific "tasks" to complete, recommended "resources" (courses, docs, practice sites), and "estimatedHours".
 - experienceLevel: Estimate the candidate's level (intern/junior/mid/senior/lead/principal) based on their resume.
 - jobTitle: Extract the job title from the JD (or "Unknown").
 - company: Extract the company name from the JD (or "Unknown").`;
@@ -105,6 +123,7 @@ Analyze the above and produce a complete interview preparation report.`;
         config: {
             systemInstruction: SYSTEM_PROMPT,
             responseMimeType: "application/json",
+            responseSchema: jsonSchema,
             maxOutputTokens: 65536,
             temperature: 0.4,
         },
