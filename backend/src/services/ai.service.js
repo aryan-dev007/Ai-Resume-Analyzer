@@ -145,6 +145,73 @@ Analyze the above and produce a complete interview preparation report.`;
     return report;
 }
 
+// ── Tailored Resume HTML Generator ───────────────────────────
+
+/**
+ * Asks Gemini to generate a tailored HTML resume based on user inputs and target Job Description.
+ */
+async function generateTailoredResumeHtml({ resumeText, selfDescription, jobDescription }) {
+    const RESUME_SYSTEM_PROMPT = `You are a world-class executive resume writer, designer, and ATS optimization expert.
+Your task is to take the candidate's existing background (resume text and self-description) and target Job Description, and craft a single, beautifully structured HTML document containing a tailored resume.
+
+CRITICAL FORMATTING INSTRUCTIONS:
+1. Output ONLY pure standalone HTML markup (starting with <!DOCTYPE html> and containing <html>, <head>, <style>, and <body>).
+2. DO NOT wrap the output in markdown code fence syntax (do NOT use \`\`\`html or \`\`\`).
+3. Include an internal CSS <style> block inside <head> with elegant, modern, print-ready CSS.
+4. CSS Guidelines:
+   - Fonts: System sans-serif fonts ('Inter', 'Segoe UI', Arial, sans-serif).
+   - Color Palette: Professional slate palette (dark header #0f172a, accent #e91e73 or #2563eb, text #334155, subtle borders #e2e8f0, gray accents #f8fafc).
+   - Page dimensions: Clean layout suited for standard A4 printing. Box-sizing border-box, max-width 800px, clean spacing.
+   - Layout Sections:
+     * Header: Candidate Name (large bold), Target Professional Title, Contact details (Email, Phone, Location, Portfolio/LinkedIn).
+     * Professional Summary: High-impact 3-4 sentence summary tailored directly to the target role's key requirements.
+     * Core Competencies & Skills: Styled pill tags or categorized list matching job keywords.
+     * Professional Experience: Job titles, company, dates, bullet points highlighting key achievements and metrics.
+     * Key Projects: Project title, technologies used, concise description of impact.
+     * Education & Certifications: Degree, institution, year, relevant certifications.
+5. Human-Written & Authentic Content Guidelines:
+   - Tailor the candidate's skills, summary, and experience specifically to match the target Job Description.
+   - The writing style MUST sound natural, authentic, and written by a real industry professional.
+   - Strictly AVOID generic AI fluff, overused buzzwords, and stereotypical AI phrasing (e.g., avoid terms like 'testament to', 'tapestry', 'delved into', 'passionate individual dedicated to driving synergy', 'leveraged dynamic capabilities').
+   - Write clear, concise, high-impact bullet points with realistic metrics and natural action verbs (e.g., 'Built', 'Engineered', 'Optimized', 'Designed', 'Led', 'Scaled').
+   - Keep bullet points grounded in real technical concepts and natural job responsibilities.
+6. STRICT SINGLE-PAGE CONSTRAINT:
+   - The entire resume MUST fit onto EXACTLY ONE single A4 page without spilling over into a second page.
+   - Use concise bullet points (2-3 per experience entry), compact CSS padding/margins (e.g., padding 15px-20px), tight line-height (1.3-1.4), and concise descriptions to guarantee a clean 1-page PDF output.`;
+
+    const userPrompt = `
+=== TARGET JOB DESCRIPTION ===
+${jobDescription || "Not provided"}
+
+=== CANDIDATE RESUME TEXT ===
+${resumeText || "Not provided"}
+
+=== CANDIDATE SELF DESCRIPTION ===
+${selfDescription || "Not provided"}
+
+Generate the complete tailored HTML resume now.`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: userPrompt,
+        config: {
+            systemInstruction: RESUME_SYSTEM_PROMPT,
+            temperature: 0.3,
+            maxOutputTokens: 65536,
+        },
+    });
+
+    if (!response.text) {
+        throw new Error("Gemini API returned empty response while generating HTML resume.");
+    }
+
+    let html = response.text.trim();
+    if (html.startsWith("```")) {
+        html = html.replace(/^```(?:html)?\n?/, "").replace(/\n?```$/, "").trim();
+    }
+    return html;
+}
+
 // ── Simple test function (can be removed later) ──────────────
 
 async function invokeGeminiAi() {
@@ -158,4 +225,5 @@ async function invokeGeminiAi() {
 module.exports = {
     invokeGeminiAi,
     generateInterviewReport,
+    generateTailoredResumeHtml,
 };

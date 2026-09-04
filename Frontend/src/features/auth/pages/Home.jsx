@@ -21,6 +21,7 @@ function Home() {
   const [selfDescription, setSelfDescription] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -131,6 +132,57 @@ function Home() {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!jobDescription.trim()) {
+      setError("Please paste the job description.");
+      return;
+    }
+    if (!resumeFile && !selfDescription.trim()) {
+      setError("Please upload a resume or provide a self-description.");
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const formData = new FormData();
+      formData.append("jobDescription", jobDescription.trim());
+      formData.append("selfDescription", selfDescription.trim());
+      if (resumeFile) {
+        formData.append("resume", resumeFile);
+      }
+
+      const res = await fetch("/api/interview/generate-pdf", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to generate PDF resume");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Tailored_Resume.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setSuccess("Tailored PDF resume generated & downloaded successfully!");
+    } catch (err) {
+      setError(err.message || "Failed to generate PDF resume.");
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -289,13 +341,26 @@ function Home() {
           </div>
 
           {/* ── Bottom Bar ── */}
-          <div className="home-bottom-bar">
-            <span className="bottom-info">
-              AI-Powered Strategy Generation <span className="dot-separator">•</span> Approx 30s
+          <div className="home-bottom-bar" style={{ display: "flex", gap: "0.8rem", alignItems: "center", justifyContent: "flex-end" }}>
+            <span className="bottom-info" style={{ marginRight: "auto" }}>
+              AI-Powered Generation <span className="dot-separator">•</span> Puppeteer PDF
             </span>
-            <button type="submit" className="generate-btn" disabled={!canSubmit}>
+            <button
+              type="button"
+              onClick={handleGeneratePdf}
+              className="generate-btn"
+              style={{
+                background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                opacity: (!canSubmit || generatingPdf || submitting) ? 0.6 : 1,
+                cursor: (!canSubmit || generatingPdf || submitting) ? "not-allowed" : "pointer"
+              }}
+              disabled={!canSubmit || generatingPdf || submitting}
+            >
+              <span>{generatingPdf ? "⏳ Generating PDF..." : "📄 Download Tailored Resume PDF"}</span>
+            </button>
+            <button type="submit" className="generate-btn" disabled={!canSubmit || submitting || generatingPdf}>
               <span className="btn-sparkle">✨</span>
-              Generate My Interview Strategy
+              Generate Interview Strategy
             </button>
           </div>
         </form>

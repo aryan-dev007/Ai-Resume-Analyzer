@@ -9,6 +9,34 @@ const Interview = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('technical'); // 'technical' | 'behavioral' | 'roadmap'
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    try {
+      setDownloadingPdf(true);
+      const res = await fetch(`/api/interview/report/${interviewId}/pdf`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to generate PDF resume');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanTitle = report?.jobTitle ? report.jobTitle.replace(/[^a-zA-Z0-9]/g, '_') : 'Tailored';
+      a.download = `Tailored_Resume_${cleanTitle}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Error downloading PDF: ' + err.message);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -90,6 +118,33 @@ const Interview = () => {
               Road Map
             </li>
           </ul>
+          
+          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #e91e73, #ff4081)',
+                color: '#ffffff',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                cursor: downloadingPdf ? 'not-allowed' : 'pointer',
+                opacity: downloadingPdf ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 15px rgba(233, 30, 115, 0.3)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {downloadingPdf ? '⏳ Generating PDF...' : '✨ Download Resume PDF'}
+            </button>
+          </div>
         </div>
 
         {/* Middle Column - Main Content */}

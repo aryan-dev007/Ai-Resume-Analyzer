@@ -1,5 +1,6 @@
 const pdfParse = require("pdf-parse");
-const { generateInterviewReport } = require("../services/ai.service");
+const { generateInterviewReport, generateTailoredResumeHtml } = require("../services/ai.service");
+const { generatePdfFromHtml } = require("../services/pdf.service");
 const InterviewReport = require("../models/interviewReport.model");
 
 // POST /api/interview/generate — Upload PDF resume + JD + self-description → AI report
@@ -175,9 +176,102 @@ async function deleteReportController(req, res) {
     }
 }
 
+// POST /api/interview/generate-pdf — Generate tailored resume PDF directly from inputs
+async function generateResumePdfController(req, res) {
+    try {
+        const resumeFile = req.file;
+        const { selfDescription, jobDescription } = req.body;
+
+        if (!jobDescription) {
+            return res.status(400).json({
+                success: false,
+                message: "jobDescription is required.",
+            });
+        }
+        if (!resumeFile && !selfDescription) {
+            return res.status(400).json({
+                success: false,
+                message: "Either a Resume PDF or a self-description is required.",
+            });
+        }
+
+        let resumeText = "";
+        if (resumeFile) {
+            const pdfData = await pdfParse(resumeFile.buffer);
+            resumeText = pdfData.text;
+        } else {
+            resumeText = selfDescription;
+        }
+
+        // 1. Generate tailored HTML using Gemini AI
+        console.log("🤖 Generating HTML resume with Gemini...");
+        const html = await generateTailoredResumeHtml({
+            resumeText,
+            selfDescription,
+            jobDescription,
+        });
+
+        // 2. Convert HTML to PDF using Puppeteer
+        console.log("📄 Converting HTML to PDF with Puppeteer...");
+        const pdfBuffer = await generatePdfFromHtml(html);
+
+        // 3. Send PDF binary response
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", 'attachment; filename="Tailored_Resume.pdf"');
+        res.setHeader("Content-Length", pdfBuffer.length);
+        return res.end(pdfBuffer);
+    } catch (error) {
+        console.error("Generate Resume PDF Error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to generate tailored resume PDF",
+        });
+    }
+}
+
+// GET /api/interview/report/:id/pdf — Generate tailored resume PDF from an existing saved report
+async function generateReportPdfByIdController(req, res) {
+    try {
+        const report = await InterviewReport.findOne({
+            _id: req.params.id,
+            user: req.user.id,
+        });
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: "Report not found",
+            });
+        }
+
+        console.log(`🤖 Generating tailored HTML resume for report ${report._id}...`);
+        const html = await generateTailoredResumeHtml({
+            resumeText: report.resumeText,
+            selfDescription: report.selfDescription,
+            jobDescription: report.jobDescription,
+        });
+
+        console.log("📄 Converting HTML to PDF with Puppeteer...");
+        const pdfBuffer = await generatePdfFromHtml(html);
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="Tailored_Resume_${report.jobTitle ? report.jobTitle.replace(/[^a-zA-Z0-9]/g, "_") : "Report"}.pdf"`);
+        res.setHeader("Content-Length", pdfBuffer.length);
+        return res.end(pdfBuffer);
+    } catch (error) {
+        console.error("Generate Report PDF Error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to generate PDF for this report",
+        });
+    }
+}
+
 module.exports = {
     generateReportController,
     getUserReportsController,
     getReportByIdController,
     deleteReportController,
+    generateResumePdfController,
+    generateReportPdfByIdController,
 };

@@ -1,0 +1,7 @@
+ApiError: {"error":{"code":503,"message":"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE"}}
+    at throwErrorIfNotOK (C:\Users\nikhi\OneDrive\Desktop\Resume_Analyzer\node_modules\@google\genai\dist\node\index.cjs:14109:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async C:\Users\nikhi\OneDrive\Desktop\Resume_Analyzer\node_modules\@google\genai\dist\node\index.cjs:13772:13
+    at async Models.generateContent (C:\Users\nikhi\OneDrive\Desktop\Resume_Analyzer\node_modules\@google\genai\dist\node\index.cjs:15240:24)
+    at async generateInterviewReport (C:\Users\nikhi\OneDrive\Desktop\Resume_Analyzer\backend\src\services\ai.service.js:120:22)
+    at async generateReportController (C:\Users\nikhi\OneDrive\Desktop\Resume_Analyzer\backend\src\controllers\interview.controller.js:43:26)

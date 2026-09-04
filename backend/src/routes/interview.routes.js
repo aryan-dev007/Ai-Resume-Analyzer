@@ -36,4 +36,17 @@ interviewRouter.delete(
     interviewController.deleteReportController
 );
 
+interviewRouter.post(
+    "/generate-pdf",
+    authMiddleware,
+    upload.single("resume"),
+    interviewController.generateResumePdfController
+);
+
+interviewRouter.get(
+    "/report/:id/pdf",
+    authMiddleware,
+    interviewController.generateReportPdfByIdController
+);
+
 module.exports = interviewRouter;
